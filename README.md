@@ -64,7 +64,7 @@ Copy the `index.js` code from this project to Cloudflare Worker.
 
 ### 以上几个配置都可以在worker -> 设置 -> 环境变量中配置，key均为对应大写，
 
-![img](readme/cfWorderEnvironment.png)
+![img](readme/Snipaste_2023-02-17_21-27-40.png)
 
 ### 点击Save and Deploy
 
@@ -72,7 +72,7 @@ Click Save and Deploy
 
 # Demo
 https://020.name
- 
+
 Note: Because someone abuse this demo website, all the generated link may be deleted at any time. For long-term use, please deploy your own.
 
 注意：由于该示例服务被人滥用，用于转发诈骗网站，故所有由demo网站生成的链接随时可能失效，如需长期使用请自行搭建。
