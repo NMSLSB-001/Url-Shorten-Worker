@@ -225,8 +225,6 @@ async function handleRequest(request) {
     })
 
   } else {
-    // const requestURL = new URL(request.url)
-    // const path = requestURL.pathname.split("/")[1]
     console.log("path" + path)
     if (!path) {
       return Response.redirect(base_url, 302)
