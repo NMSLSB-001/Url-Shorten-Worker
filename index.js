@@ -33,6 +33,9 @@ const html404 = `<!DOCTYPE html>
   <h1>404 Not Found.</h1>
   <p>The url you visit is not found.</p>
 </body>`
+// Default 302 redirect link
+const base_url = typeof (BASE_URL) != "undefined" ? BASE_URL
+  : 'https://github.com/NMSLSB-001'
 
 // Generate random string
 async function randomString(len) {
@@ -98,7 +101,9 @@ async function save_url(url, key, admin, len) {
   }
   const is_exists = await load_url(key)
   console.log("key exists " + key + " " + is_exists)
-  if (override || !is_exists) {
+  if (key === "short" || key === "thisKeyIsError") {
+    return await "thisKeyIsError"
+  } else if (override || !is_exists) {
     var mode = 3
     if (admin) {
       mode = 0
@@ -145,54 +150,70 @@ async function load_url(key) {
   }
   return url
 }
+
 async function handleRequest(request) {
   console.log(request)
+  const requestURL = new URL(request.url)
+  const path = requestURL.pathname.split("/")[1]
+  console.log("path" + path)
+  console.log("request.method" + request.method)
   if (request.method === "POST") {
-    let req = await request.json()
-    console.log("req " + JSON.stringify(req))
-    if (req["type"] === "web") {
-      var admin = await checkHash(req["url"], req["hash"])
-      console.log("admin " + admin)
-    } else if (req["type"] === "api") {
-      var admin = await checkPassword(req["password"])
-    } else {
-      return new Response(`{"status":500,"key":": Error: Type illegal."}`, {
-        headers: {
-          "content-type": "text/html;charset=UTF-8",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST",
-        },
-      })
-    }
-    console.log(admin)
-    if (!await checkURL(req["url"]) || (!admin && !demo_mode && !await checkWhite(new URL(req["url"]).host))) {
-      // 非演示模式下，非白名单地址当成地址不合法处理，
-      return new Response(`{"status":500,"key":": Error: Url illegal."}`, {
-        headers: {
-          "content-type": "text/html;charset=UTF-8",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST",
-        },
-      })
-    }
-    let stat, random_key = await save_url(req["url"], req["key"], admin)
-    console.log("stat " + stat)
-    if (typeof (stat) == "undefined") {
-      return new Response(`{"status":200,"key":"/` + random_key + `"}`, {
-        headers: {
-          "content-type": "text/html;charset=UTF-8",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST",
-        },
-      })
-    } else {
-      return new Response(`{"status":200,"key":": Error:Reach the KV write limitation."}`, {
-        headers: {
-          "content-type": "text/html;charset=UTF-8",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST",
-        },
-      })
+    if (path === "short") {
+      let req = await request.json()
+      console.log("req " + JSON.stringify(req))
+      if (req["type"] === "web") {
+        var admin = await checkHash(req["url"], req["hash"])
+        console.log("admin " + admin)
+      } else if (req["type"] === "api") {
+        var admin = await checkPassword(req["password"])
+      } else {
+        return new Response(`{"status":500,"key":": Error: Type illegal."}`, {
+          headers: {
+            "content-type": "text/html;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+          },
+        })
+      }
+      console.log(admin)
+      if (!await checkURL(req["url"]) || (!admin && !demo_mode && !await checkWhite(new URL(req["url"]).host))) {
+        // 非演示模式下，非白名单地址当成地址不合法处理，
+        return new Response(`{"status":500,"key":": Error: Url illegal."}`, {
+          headers: {
+            "content-type": "text/html;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+          },
+        })
+      }
+      let stat, random_key = await save_url(req["url"], req["key"], admin)
+      console.log("stat " + stat)
+      if (random_key === "thisKeyIsError") {
+        return new Response(`{"status":500,"key":": Error: Key illegal."}`, {
+          headers: {
+            "content-type": "text/html;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+          },
+          status: 500
+        })
+      } else if (typeof (stat) == "undefined") {
+        return new Response(`{"status":200,"key":"/` + random_key + `"}`, {
+          headers: {
+            "content-type": "text/html;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+          },
+        })
+      } else {
+        return new Response(`{"status":200,"key":": Error:Reach the KV write limitation."}`, {
+          headers: {
+            "content-type": "text/html;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+          },
+        })
+      }
     }
   } else if (request.method === "OPTIONS") {
     return new Response(``, {
@@ -203,37 +224,39 @@ async function handleRequest(request) {
       },
     })
 
-  }
+  } else {
+    // const requestURL = new URL(request.url)
+    // const path = requestURL.pathname.split("/")[1]
+    console.log("path" + path)
+    if (!path) {
+      return Response.redirect(base_url, 302)
+    } else if (path === "short") {
 
-  const requestURL = new URL(request.url)
-  const path = requestURL.pathname.split("/")[1]
-  console.log(path)
-  if (!path) {
+      const html = await fetch(`https://cdn.jsdelivr.net/gh/${github_repo}${github_version}/index.html`)
+      const text = (await html.text())
+        .replaceAll("###GITHUB_REPO###", github_repo)
+        .replaceAll("###GITHUB_VERSION###", github_version)
+        .replaceAll("###DEMO_NOTICE###", demo_notice)
 
-    const html = await fetch(`https://cdn.jsdelivr.net/gh/${github_repo}${github_version}/index.html`)
-    const text = (await html.text())
-      .replaceAll("###GITHUB_REPO###", github_repo)
-      .replaceAll("###GITHUB_VERSION###", github_version)
-      .replaceAll("###DEMO_NOTICE###", demo_notice)
-
-    return new Response(text, {
-      headers: {
-        "content-type": "text/html;charset=UTF-8",
-      },
-    })
+      return new Response(text, {
+        headers: {
+          "content-type": "text/html;charset=UTF-8",
+        },
+      })
+    }
+    const url = await load_url(path)
+    if (!url) {
+      // 找不到或者超时直接404,
+      console.log('not found')
+      return new Response(html404, {
+        headers: {
+          "content-type": "text/html;charset=UTF-8",
+        },
+        status: 404
+      })
+    }
+    return Response.redirect(url, 302)
   }
-  const url = await load_url(path)
-  if (!url) {
-    // 找不到或者超时直接404,
-    console.log('not found')
-    return new Response(html404, {
-      headers: {
-        "content-type": "text/html;charset=UTF-8",
-      },
-      status: 404
-    })
-  }
-  return Response.redirect(url, 302)
 }
 
 
