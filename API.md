@@ -10,7 +10,10 @@
 示例：
 ```
 {
-	"url": "https://example.com"
+    "url": "www.demo.com",
+    "key": "demo",
+    "password": "PASSWORD",
+    "type": "api" //don't change
 }
 ```
 
